@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>HydroFlow - Water Tracker</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#05080f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; -webkit-tap-highlight-color: transparent; user-select: none; }
+    body { background-color: #05080f; color: #e8eaed; min-height: 100vh; display: flex; flex-direction: column; overflow-x: hidden; }
+    
+    #setupScreen { max-width: 500px; margin: 0 auto; padding: 40px 20px; min-height: 100vh; display: flex; flex-direction: column; justify-content: center; }
+    #setupScreen h1 { color: #00e5ff; font-size: 28px; margin-bottom: 8px; text-align: center; }
+    #setupScreen p { color: #9aa0a6; text-align: center; margin-bottom: 30px; font-size: 15px; }
+    #setupScreen label { display: block; color: #9aa0a6; font-size: 14px; margin-bottom: 6px; margin-top: 15px; }
+    #setupScreen input { width: 100%; padding: 12px 15px; background-color: #1a1f2e; border: 1px solid #2a3142; border-radius: 10px; color: #e8eaed; font-size: 15px; outline: none; }
+    #setupScreen input:focus { border-color: #00e5ff; }
+    #setupSaveButton { margin-top: 25px; width: 100%; padding: 14px; background: linear-gradient(135deg, #00e5ff, #0088cc); color: #05080f; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; }
+
+    #mainApp { max-width: 500px; margin: 0 auto; padding: 15px; min-height: 100vh; display: flex; flex-direction: column; }
+    .header { display: flex; align-items: center; justify-content: space-between; padding: 10px 5px; margin-bottom: 20px; }
+    .header button { background: none; border: none; color: #e8eaed; font-size: 20px; cursor: pointer; padding: 5px 10px; }
+    .header span { color: #ffffff; font-size: 18px; font-weight: 700; }
+
+    .stats-container { display: flex; gap: 10px; margin-bottom: 20px; }
+    .stat-card { flex: 1; background-color: #1a1f2e; border-radius: 14px; padding: 15px; text-align: center; border: 1px solid #2a3142; }
+    .stat-card h2 { color: #00e5ff; font-size: 24px; margin-bottom: 5px; }
+    .stat-card p { color: #9aa0a6; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
+
+    .water-container { position: relative; width: 250px; height: 250px; margin: 20px auto 30px auto; display: flex; justify-content: center; align-items: center; }
+    .circle-bg { position: absolute; width: 100%; height: 100%; border-radius: 50%; background: #1a1f2e; box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8); }
+    .water-wave { position: absolute; width: 230px; height: 230px; border-radius: 50%; overflow: hidden; background: #0f1419; box-shadow: 0 0 30px rgba(0, 229, 255, 0.2); }
+    .wave-fill { position: absolute; bottom: 0; left: 0; width: 100%; height: 0%; background: linear-gradient(180deg, #00b8d4, #0055ff); transition: height 0.8s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 0 20px rgba(0, 229, 255, 0.6); }
+    .wave-fill::before, .wave-fill::after { content: ''; position: absolute; top: -10px; left: 50%; width: 200%; height: 200%; transform: translateX(-50%); background: rgba(0, 229, 255, 0.3); border-radius: 40%; animation: spin 5s linear infinite; }
+    .wave-fill::after { background: rgba(0, 229, 255, 0.1); border-radius: 35%; animation: spin 7s linear infinite; }
+    @keyframes spin { 0% { transform: translateX(-50%) rotate(0deg); } 100% { transform: translateX(-50%) rotate(360deg); } }
+
+    .water-info { position: relative; z-index: 10; text-align: center; text-shadow: 0 2px 10px rgba(0,0,0,0.5); transition: color 0.5s ease; }
+    .water-info h1 { font-size: 48px; color: #ffffff; font-weight: 800; margin-bottom: 5px; transition: color 0.5s ease; }
+    .water-info h1 span { font-size: 20px; color: #e8eaed; }
+    .water-info p { color: rgba(255, 255, 255, 0.8); font-size: 14px; font-weight: 600; }
+
+    .action-buttons { display: flex; gap: 15px; margin-top: auto; margin-bottom: 20px; }
+    .add-btn { flex: 1; padding: 18px; border: none; border-radius: 16px; font-size: 16px; font-weight: bold; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; transition: all 0.3s ease; }
+    .add-btn:active { transform: scale(0.95); }
+    .add-btn span { font-size: 12px; font-weight: 500; opacity: 0.8; }
+    .btn-glass { background: linear-gradient(135deg, #1a1f2e, #2a3142); color: #00e5ff; border: 1px solid #00e5ff; box-shadow: 0 0 15px rgba(0, 229, 255, 0.1); }
+    .btn-bottle { background: linear-gradient(135deg, #00e5ff, #0088cc); color: #05080f; box-shadow: 0 0 15px rgba(0, 229, 255, 0.4); }
+    .add-btn.disabled { opacity: 0.4; filter: grayscale(1); pointer-events: none; box-shadow: none; }
+
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); z-index: 1000; justify-content: center; align-items: center; padding: 20px; backdrop-filter: blur(5px); }
+    .modal-overlay.active { display: flex; }
+    .modal-box { background-color: #1a1f2e; border-radius: 20px; padding: 25px; width: 100%; max-width: 400px; border: 1px solid #2a3142; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+    .modal-box h2 { color: #ffffff; margin-bottom: 20px; font-size: 22px; text-align: center; }
+    .modal-box label { display: block; color: #9aa0a6; font-size: 13px; margin-bottom: 6px; margin-top: 12px; }
+    .modal-box input { width: 100%; padding: 12px 15px; background-color: #0f1419; border: 1px solid #2a3142; border-radius: 10px; color: #e8eaed; font-size: 15px; outline: none; }
+    .modal-box input:focus { border-color: #00e5ff; }
+
+    .settings-buttons { display: flex; gap: 10px; margin-top: 20px; }
+    .settings-buttons button { flex: 1; padding: 14px; border: none; border-radius: 10px; font-size: 14px; font-weight: bold; cursor: pointer; }
+    #settingsCancel, #resetCancel { background-color: #2a3142; color: #e8eaed; }
+    #settingsSave { background: linear-gradient(135deg, #00e5ff, #0088cc); color: #05080f; }
+    #resetConfirm { background: linear-gradient(135deg, #ff6b4a, #d35400); color: white; }
+    #resetDataBtn { width: 100%; margin-top: 15px; padding: 12px; background: transparent; color: #ff6b4a; border: 1px solid #ff6b4a; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; }
+
+    .toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-100px); background: linear-gradient(135deg, #00e5ff, #0088cc); color: #05080f; padding: 14px 24px; border-radius: 12px; font-size: 14px; font-weight: bold; z-index: 9999; opacity: 0; transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55); text-align: center; }
+    .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+  </style>
+</head>
+<body>
+
+  <div id="setupScreen">
+    <h1>Welcome to HydroFlow 💧</h1>
+    <p>Let's set your daily hydration goal</p>
+    <label>Daily Water Goal (in Liters):</label>
+    <input type="number" id="setupGoal" step="0.5" min="1" max="10" value="2.5" placeholder="e.g. 2.5">
+    <button id="setupSaveButton">Start Hydrating</button>
+  </div>
+
+  <div id="mainApp" style="display: none;">
+    <div class="header">
+      <button id="settingsButton">⚙️</button>
+      <span>HydroFlow</span>
+      <button id="resetButton" style="font-size: 16px;">🔄</button>
+    </div>
+
+    <div class="stats-container">
+      <div class="stat-card"><h2 id="streakStat">0</h2><p>Day Streak</p></div>
+      <div class="stat-card"><h2 id="goalStat">2.5L</h2><p>Daily Goal</p></div>
+    </div>
+
+    <div class="water-container">
+      <div class="circle-bg"></div>
+      <div class="water-wave"><div class="wave-fill" id="waveFill"></div></div>
+      <div class="water-info">
+        <h1 id="waterAmount">0.0<span>L</span></h1>
+        <p id="percentText">0%</p>
+      </div>
+    </div>
+
+    <div class="action-buttons" id="actionButtons">
+      <button class="add-btn btn-glass" id="btnGlass" onclick="addWater(250)">🥛 +250ml<span>1 Glass</span></button>
+      <button class="add-btn btn-bottle" id="btnBottle" onclick="addWater(500)">🍾 +500ml<span>1 Bottle</span></button>
+    </div>
+  </div>
+
+  <div id="settingsModal" class="modal-overlay">
+    <div class="modal-box">
+      <h2>Settings</h2>
+      <label>Daily Water Goal (in Liters):</label>
+      <input type="number" id="settingsGoal" step="0.5" min="1" max="10">
+      <div class="settings-buttons">
+        <button id="settingsCancel">Cancel</button>
+        <button id="settingsSave">Save</button>
+      </div>
+      <button id="resetDataBtn">⚠️ Reset All Data</button>
+    </div>
+  </div>
+
+  <div id="resetModal" class="modal-overlay">
+    <div class="modal-box" style="text-align: center;">
+      <h2 style="color: #ff6b4a;">Reset All Data?</h2>
+      <p style="color: #9aa0a6; font-size: 14px; margin-bottom: 20px; line-height: 1.5;">This will permanently delete all your water intake history and streaks. Are you sure?</p>
+      <div class="settings-buttons">
+        <button id="resetCancel">Cancel</button>
+        <button id="resetConfirm">Reset All</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let waterData = { dailyGoal: 2.5, logs: {} };
+    function getDateKey(date) { const d = date || new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; }
+    function showToast(message) { const toast = document.createElement("div"); toast.className = "toast"; toast.textContent = message; document.body.appendChild(toast); setTimeout(() => toast.classList.add("show"), 10); setTimeout(() => { toast.classList.remove("show"); setTimeout(() => toast.remove(), 400); }, 2500); }
+
+    const savedData = localStorage.getItem("aquaData");
+    if (savedData) waterData = JSON.parse(savedData);
+
+    const setupScreen = document.getElementById("setupScreen");
+    const mainApp = document.getElementById("mainApp");
+
+    document.getElementById("setupSaveButton").addEventListener("click", function() {
+      const goal = parseFloat(document.getElementById("setupGoal").value);
+      if (isNaN(goal) || goal < 1) { showToast("Please enter a valid goal (min 1L)"); return; }
+      waterData.dailyGoal = goal; localStorage.setItem("aquaData", JSON.stringify(waterData)); startMainApp();
+    });
+
+    function startMainApp() { setupScreen.style.display = "none"; mainApp.style.display = "flex"; updateUI(); }
+    if (savedData && waterData.dailyGoal) startMainApp();
+
+    function getTodayIntake() { const todayKey = getDateKey(); return waterData.logs[todayKey] || 0; }
+
+    function addWater(ml) {
+      const todayKey = getDateKey(); let currentIntake = waterData.logs[todayKey] || 0; const goal = waterData.dailyGoal;
+      if (currentIntake >= goal) { showToast("You already reached your goal! 🎉"); return; }
+      const litersToAdd = ml / 1000; let newIntake = currentIntake + litersToAdd;
+      if (newIntake >= goal) { newIntake = goal; showToast("Goal Reached! You are fully hydrated! 💧✨"); } 
+      else { showToast(`Added ${ml}ml! Keep it up!`); }
+      waterData.logs[todayKey] = Math.round(newIntake * 100) / 100;
+      localStorage.setItem("aquaData", JSON.stringify(waterData)); updateUI();
+    }
+
+    function calculateStreak() {
+      let streak = 0; let currentDate = new Date();
+      while (true) {
+        const key = getDateKey(currentDate); const intake = waterData.logs[key] || 0;
+        if (intake >= waterData.dailyGoal) { streak++; currentDate.setDate(currentDate.getDate() - 1); } 
+        else { if (streak === 0 && key === getDateKey()) { currentDate.setDate(currentDate.getDate() - 1); continue; } break; }
+        if (streak > 365) break;
+      }
+      return streak;
+    }
+
+    function updateUI() {
+      const todayIntake = getTodayIntake(); const goal = waterData.dailyGoal; const percent = Math.min((todayIntake / goal) * 100, 100);
+      document.getElementById("waterAmount").innerHTML = `${todayIntake.toFixed(1)}<span>L</span>`;
+      document.getElementById("percentText").textContent = `${Math.round(percent)}% of ${goal}L`;
+      document.getElementById("waveFill").style.height = `${percent}%`;
+      document.getElementById("streakStat").textContent = calculateStreak();
+      document.getElementById("goalStat").textContent = `${goal}L`;
+      const btnGlass = document.getElementById("btnGlass"); const btnBottle = document.getElementById("btnBottle");
+      if (todayIntake >= goal) {
+        document.getElementById("waveFill").style.background = "linear-gradient(180deg, #00ff88, #00b8d4)";
+        document.getElementById("waterAmount").style.color = "#00ff88";
+        btnGlass.classList.add("disabled"); btnBottle.classList.add("disabled");
+      } else {
+        document.getElementById("waveFill").style.background = "linear-gradient(180deg, #00b8d4, #0055ff)";
+        document.getElementById("waterAmount").style.color = "#ffffff";
+        btnGlass.classList.remove("disabled"); btnBottle.classList.remove("disabled");
+      }
+    }
+
+    const settingsModal = document.getElementById("settingsModal");
+    const resetModal = document.getElementById("resetModal");
+    
+    document.getElementById("settingsButton").addEventListener("click", function() { document.getElementById("settingsGoal").value = waterData.dailyGoal; settingsModal.classList.add("active"); });
+    document.getElementById("settingsCancel").addEventListener("click", function() { settingsModal.classList.remove("active"); });
+    settingsModal.addEventListener("click", function(e) { if (e.target === settingsModal) settingsModal.classList.remove("active"); });
+
+    document.getElementById("settingsSave").addEventListener("click", function() {
+      const newGoal = parseFloat(document.getElementById("settingsGoal").value);
+      if (isNaN(newGoal) || newGoal < 1) { showToast("Please enter a valid goal"); return; }
+      waterData.dailyGoal = newGoal; localStorage.setItem("aquaData", JSON.stringify(waterData)); updateUI();
+      settingsModal.classList.remove("active"); showToast("Goal updated!");
+    });
+
+    document.getElementById("resetDataBtn").addEventListener("click", function() { settingsModal.classList.remove("active"); resetModal.classList.add("active"); });
+    document.getElementById("resetCancel").addEventListener("click", function() { resetModal.classList.remove("active"); settingsModal.classList.add("active"); });
+    resetModal.addEventListener("click", function(e) { if (e.target === resetModal) { resetModal.classList.remove("active"); settingsModal.classList.add("active"); } });
+    document.getElementById("resetConfirm").addEventListener("click", function() { localStorage.removeItem("aquaData"); location.reload(); });
+
+    document.getElementById("resetButton").addEventListener("click", function() {
+      const todayKey = getDateKey(); waterData.logs[todayKey] = 0;
+      localStorage.setItem("aquaData", JSON.stringify(waterData)); updateUI(); showToast("Today's intake reset to 0.");
+    });
+
+    let lastKnownDate = getDateKey();
+    setInterval(() => {
+      const currentDate = getDateKey();
+      if (currentDate !== lastKnownDate) { lastKnownDate = currentDate; updateUI(); showToast("New Day Started! Keep Hydrated 💧"); }
+    }, 60000);
+
+    history.pushState({ page: "main" }, "");
+    window.addEventListener("popstate", function(event) {
+      const openModals = document.querySelectorAll('.modal-overlay.active');
+      if (openModals.length > 0) { openModals.forEach(modal => modal.classList.remove('active')); history.pushState({ page: "main" }, ""); }
+    });
+
+    if ("serviceWorker" in navigator) { navigator.serviceWorker.register("service-worker.js").catch(err => console.log("SW failed:", err)); }
+  </script>
+</body>
+</html>
