@@ -42,13 +42,17 @@
     .water-info h1 span { font-size: 20px; color: #e8eaed; }
     .water-info p { color: rgba(255, 255, 255, 0.8); font-size: 14px; font-weight: 600; }
 
-    .action-buttons { display: flex; gap: 15px; margin-top: auto; margin-bottom: 20px; }
+    .action-buttons { display: flex; gap: 15px; margin-top: auto; margin-bottom: 15px; }
     .add-btn { flex: 1; padding: 18px; border: none; border-radius: 16px; font-size: 16px; font-weight: bold; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; transition: all 0.3s ease; }
     .add-btn:active { transform: scale(0.95); }
     .add-btn span { font-size: 12px; font-weight: 500; opacity: 0.8; }
     .btn-glass { background: linear-gradient(135deg, #1a1f2e, #2a3142); color: #00e5ff; border: 1px solid #00e5ff; box-shadow: 0 0 15px rgba(0, 229, 255, 0.1); }
     .btn-bottle { background: linear-gradient(135deg, #00e5ff, #0088cc); color: #05080f; box-shadow: 0 0 15px rgba(0, 229, 255, 0.4); }
     .add-btn.disabled { opacity: 0.4; filter: grayscale(1); pointer-events: none; box-shadow: none; }
+
+    /* 🟢 নতুন হিস্ট্রি বাটনের ডিজাইন */
+    .history-btn { width: 100%; padding: 15px; background: #1a1f2e; color: #00e5ff; border: 1px solid #2a3142; border-radius: 16px; font-size: 15px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 20px; transition: 0.2s; }
+    .history-btn:active { background: #2a3142; transform: scale(0.98); }
 
     .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); z-index: 1000; justify-content: center; align-items: center; padding: 20px; backdrop-filter: blur(5px); }
     .modal-overlay.active { display: flex; }
@@ -60,7 +64,7 @@
 
     .settings-buttons { display: flex; gap: 10px; margin-top: 20px; }
     .settings-buttons button { flex: 1; padding: 14px; border: none; border-radius: 10px; font-size: 14px; font-weight: bold; cursor: pointer; }
-    #settingsCancel, #resetCancel { background-color: #2a3142; color: #e8eaed; }
+    #settingsCancel, #resetCancel, #historyClose { background-color: #2a3142; color: #e8eaed; }
     #settingsSave { background: linear-gradient(135deg, #00e5ff, #0088cc); color: #05080f; }
     #resetConfirm { background: linear-gradient(135deg, #ff6b4a, #d35400); color: white; }
     #resetDataBtn { width: 100%; margin-top: 15px; padding: 12px; background: transparent; color: #ff6b4a; border: 1px solid #ff6b4a; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; }
@@ -104,6 +108,11 @@
       <button class="add-btn btn-glass" id="btnGlass" onclick="addWater(250)">🥛 +250ml<span>1 Glass</span></button>
       <button class="add-btn btn-bottle" id="btnBottle" onclick="addWater(500)">🍾 +500ml<span>1 Bottle</span></button>
     </div>
+
+    <!-- 🟢 নতুন হিস্ট্রি বাটন -->
+    <button class="history-btn" id="openHistoryBtn">
+      <span>📊</span> View History & Stats
+    </button>
   </div>
 
   <div id="settingsModal" class="modal-overlay">
@@ -126,6 +135,26 @@
       <div class="settings-buttons">
         <button id="resetCancel">Cancel</button>
         <button id="resetConfirm">Reset All</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 🟢 নতুন হিস্ট্রি মডাল -->
+  <div id="historyModal" class="modal-overlay">
+    <div class="modal-box">
+      <h2>Hydration History 📊</h2>
+      <div class="stats-container" style="margin-bottom: 25px;">
+        <div class="stat-card">
+          <h2 id="weekTotal" style="color: #00e5ff;">0.0L</h2>
+          <p>This Week</p>
+        </div>
+        <div class="stat-card">
+          <h2 id="monthTotal" style="color: #00e5ff;">0.0L</h2>
+          <p>This Month</p>
+        </div>
+      </div>
+      <div class="settings-buttons" style="margin-top: 0;">
+        <button id="historyClose">Close</button>
       </div>
     </div>
   </div>
@@ -173,6 +202,36 @@
       return streak;
     }
 
+    // 🟢 নতুন ফাংশন: সপ্তাহ এবং মাসের হিসাব বের করা
+    function calculateHistory() {
+      let weekTotal = 0;
+      let monthTotal = 0;
+      const today = new Date();
+      const currentMonth = today.getMonth();
+      const currentYear = today.getFullYear();
+
+      for (let dateStr in waterData.logs) {
+        const [year, month, day] = dateStr.split('-').map(Number);
+        const logDate = new Date(year, month - 1, day);
+        const amount = waterData.logs[dateStr];
+
+        // মাসের হিসাব
+        if (year === currentYear && month - 1 === currentMonth) {
+          monthTotal += amount;
+        }
+
+        // সপ্তাহের হিসাব (গত ৭ দিনের ডেটা)
+        const diffTime = Math.abs(today - logDate);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        if (diffDays <= 7) {
+          weekTotal += amount;
+        }
+      }
+
+      document.getElementById('weekTotal').textContent = weekTotal.toFixed(1) + 'L';
+      document.getElementById('monthTotal').textContent = monthTotal.toFixed(1) + 'L';
+    }
+
     function updateUI() {
       const todayIntake = getTodayIntake(); const goal = waterData.dailyGoal; const percent = Math.min((todayIntake / goal) * 100, 100);
       document.getElementById("waterAmount").innerHTML = `${todayIntake.toFixed(1)}<span>L</span>`;
@@ -194,6 +253,15 @@
 
     const settingsModal = document.getElementById("settingsModal");
     const resetModal = document.getElementById("resetModal");
+    const historyModal = document.getElementById("historyModal"); // 🟢 নতুন
+    
+    // 🟢 নতুন ইভেন্ট লিসেনার
+    document.getElementById("openHistoryBtn").addEventListener("click", function() {
+      calculateHistory();
+      historyModal.classList.add("active");
+    });
+    document.getElementById("historyClose").addEventListener("click", function() { historyModal.classList.remove("active"); });
+    historyModal.addEventListener("click", function(e) { if (e.target === historyModal) historyModal.classList.remove("active"); });
     
     document.getElementById("settingsButton").addEventListener("click", function() { document.getElementById("settingsGoal").value = waterData.dailyGoal; settingsModal.classList.add("active"); });
     document.getElementById("settingsCancel").addEventListener("click", function() { settingsModal.classList.remove("active"); });
